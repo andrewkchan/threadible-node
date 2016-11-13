@@ -8,7 +8,8 @@
   "dependencies": {
     "async": "~0.2.8",
     "express": "~3.2.4",
-    "socket.io": "~0.9.14"
+    "request": "^2.78.0",
+    "socket.io": "^1.0.6"
   },
   "devDependencies": {
     "webpack": "^1.13.3"

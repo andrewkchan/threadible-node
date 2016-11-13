@@ -7,5 +7,5 @@ hahhahahahahahhahahahhahaha
 */
 
 exports.createRoutes = function(app){
-    app.use(express.static(path.resolve(__dirname, 'client/build')));
+    app.use(express.static(path.resolve(__dirname, 'client')));
 }
