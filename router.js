@@ -8,4 +8,6 @@ hahhahahahahahhahahahhahaha
 
 exports.createRoutes = function(app){
     app.use(express.static(path.resolve(__dirname, 'client')));
+    
+    //app.get("/", )
 }

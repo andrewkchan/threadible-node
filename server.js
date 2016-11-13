@@ -20,10 +20,20 @@ var API_URL = "https://threadible-akc.c9users.io/api/";
 //  * `port` - The HTTP port to listen on. If `process.env.PORT` is set, _it overrides this value_.
 //
 var app = express();
+//express middleware.---------
 var router = require("./router");
 router.createRoutes(app);
+var session = require("express-session");
+app.use(session({
+  secret: 'should_not_expose_this_in_production_but_whatever_this_is_a_hackathon',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }
+}));
+//-----------------------------
 var server = http.createServer(app);
 var io = socketio.listen(server);
+var pythread = require("./pythread")();
 
 /*
 List of cells in the current workspace.
@@ -57,27 +67,45 @@ io.on('connection', function (socket) {
   the API server and waiting for the response. After response is received, broadcast new cell with added output to all users.
   */
   socket.on('eval_cell_input', function (new_cell) {
+    console.log("eval_cell_input event received");
+    console.log(new_cell);
     var code = String(new_cell.code || '');
     if (!code)
       return;
+    if (new_cell.id == -1) {
+      cells.push(new_cell);
+    }
+    else {
+      //can immediately broadcast results if no need to wait for DB entry
+      console.log("Evaluating in python");
+      pythread.eval(new_cell.code, function(outputString, errString) {
+        new_cell.output = {
+          type: "terminal",
+          data: outputString,
+          err: errString
+        };
+        broadcast("eval_cell_output", new_cell);
+      });
+    }
     /*
-    request.post(
-        API_URL + "cells/edit",
-        { json: { workspace_id: 1, code: new_cell.code } },
-        function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                console.log(body);
+    request.post(API_URL + "cells/edit", {form: { "workspace_id": 1, "code": new_cell.code, "cell_id": new_cell.id }}, 
+      function (error, response, body) {
+        console.log(response.statusCode);
+        if (!error && response.statusCode == 200) {
+            if (new_cell.id == -1) {
+              new_cell.id = JSON.parse(body);
+              console.log("Evaluating new cell in python");
+              pythread.eval(new_cell.code, function(outputString) {
+                new_cell.output = {
+                  type: "terminal",
+                  data: outputString
+                };
+                broadcast("eval_cell_output", new_cell);
+              });
             }
         }
-    );
+    });
     */
-    new_cell.output = {
-      type: "terminal",
-      data: "This cell passed through the node server. yay!"
-    };
-      
-    broadcast("eval_cell_output", new_cell);
-    cells.push(new_cell);
   });
 });
 
